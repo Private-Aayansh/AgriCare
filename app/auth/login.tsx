@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { apiClient } from '../../utils/api';
+import { phoneAuthService } from '../../utils/phoneAuth';
 import { ArrowLeft, Mail, Phone } from 'lucide-react-native';
 
 export default function Login() {
@@ -50,17 +51,35 @@ export default function Login() {
     
     try {
       if (useEmail) {
+        // Email OTP flow (existing)
         await apiClient.sendEmailOTP(formData.email);
+        
+        // Navigate to OTP verification
+        router.push({
+          pathname: '/auth/otp-verification',
+          params: {
+            role: role!,
+            email: formData.email,
+          },
+        });
+      } else {
+        // Phone OTP flow using Firebase
+        const result = await phoneAuthService.sendOTP(formData.phone);
+        
+        if (result.success) {
+          // Navigate to OTP verification with phone
+          router.push({
+            pathname: '/auth/otp-verification',
+            params: {
+              role: role!,
+              phone: formData.phone,
+              useFirebase: 'true', // Flag to indicate Firebase phone auth
+            },
+          });
+        } else {
+          setApiError(result.error || 'Failed to send OTP to phone');
+        }
       }
-      
-      // Navigate to OTP verification
-      router.push({
-        pathname: '/auth/otp-verification',
-        params: {
-          role: role!,
-          ...(useEmail ? { email: formData.email } : { phone: formData.phone }),
-        },
-      });
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
@@ -72,6 +91,11 @@ export default function Login() {
 
   return (
     <View style={styles.container}>
+      {/* reCAPTCHA container for web phone auth */}
+      {Platform.OS === 'web' && !useEmail && (
+        <div id="recaptcha-container" style={{ display: 'none' }}></div>
+      )}
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="#374151" />
@@ -122,7 +146,7 @@ export default function Login() {
           ) : (
             <Input
               label={t('common.phone')}
-              placeholder={t('auth.enterPhone')}
+              placeholder="+91 9876543210"
               value={formData.phone}
               onChangeText={(text) => setFormData({ ...formData, phone: text })}
               keyboardType="phone-pad"

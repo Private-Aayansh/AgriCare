@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Tractor, HardHat, Phone } from 'lucide-react-native';
+import { Tractor, HardHat } from 'lucide-react-native';
 
 export default function RoleSelection() {
   const router = useRouter();
@@ -13,10 +13,6 @@ export default function RoleSelection() {
       pathname: '/auth/signup',
       params: { role },
     });
-  };
-
-  const handlePhoneAuth = () => {
-    router.push('/auth/phone-auth');
   };
 
   return (
@@ -45,20 +41,6 @@ export default function RoleSelection() {
             <Text style={styles.roleText}>{t('auth.labour')}</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity
-          style={styles.phoneAuthButton}
-          onPress={handlePhoneAuth}
-        >
-          <Phone size={24} color="#FFFFFF" />
-          <Text style={styles.phoneAuthText}>Continue with Phone</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -85,7 +67,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 16,
-    marginBottom: 32,
   },
   roleCard: {
     flex: 1,
@@ -107,36 +88,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     textAlign: 'center',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  phoneAuthButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    gap: 12,
-  },
-  phoneAuthText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

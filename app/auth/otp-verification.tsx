@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { apiClient } from '../../utils/api';
+import { phoneAuthService } from '../../utils/phoneAuth';
 import { ArrowLeft } from 'lucide-react-native';
 
 export default function OTPVerification() {
   const router = useRouter();
-  const { email, phone, role } = useLocalSearchParams<{
+  const { email, phone, role, useFirebase } = useLocalSearchParams<{
     email?: string;
     phone?: string;
     role: 'farmer' | 'labour';
+    useFirebase?: string;
   }>();
   const { t } = useLanguage();
   const { login } = useAuth();
@@ -24,6 +26,8 @@ export default function OTPVerification() {
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [apiError, setApiError] = useState<string>('');
+
+  const isFirebaseAuth = useFirebase === 'true';
 
   useEffect(() => {
     if (timer > 0) {
@@ -46,31 +50,51 @@ export default function OTPVerification() {
     setApiError('');
     
     try {
-      let response;
-      
-      if (email) {
-        response = await apiClient.verifyEmailOTP(email, otp);
-      } else if (phone) {
-        // For phone verification, we would need to handle Firebase auth
-        // For now, we'll simulate it
-        response = await apiClient.verifyPhoneOTP('dummy_firebase_token');
-      }
+      if (isFirebaseAuth && phone) {
+        // Firebase phone verification
+        const result = await phoneAuthService.verifyOTP(otp);
+        
+        if (result.success && result.user) {
+          // Create user object for your auth context
+          const user = {
+            name: result.user.displayName || 'User',
+            phone: result.user.phoneNumber,
+            role: role,
+          };
 
-      if (response?.token) {
-        const user = {
-          name: 'User', // This would come from the token
-          email: email,
-          phone: phone,
-          role: role,
-        };
-        
-        await login(response.token, user);
-        
-        // Navigate to appropriate dashboard
-        if (role === 'farmer') {
-          router.replace('/(farmer-tabs)');
+          // Get Firebase ID token for your backend
+          const token = await result.user.getIdToken();
+          
+          await login(token, user);
+          
+          // Navigate to appropriate dashboard
+          if (role === 'farmer') {
+            router.replace('/(farmer-tabs)');
+          } else {
+            router.replace('/(labour-tabs)');
+          }
         } else {
-          router.replace('/(labour-tabs)');
+          setApiError(result.error || 'Phone verification failed');
+        }
+      } else if (email) {
+        // Email OTP verification (existing flow)
+        const response = await apiClient.verifyEmailOTP(email, otp);
+
+        if (response?.token) {
+          const user = {
+            name: 'User', // This would come from the token
+            email: email,
+            role: role,
+          };
+          
+          await login(response.token, user);
+          
+          // Navigate to appropriate dashboard
+          if (role === 'farmer') {
+            router.replace('/(farmer-tabs)');
+          } else {
+            router.replace('/(labour-tabs)');
+          }
         }
       }
     } catch (error) {
@@ -89,13 +113,24 @@ export default function OTPVerification() {
     setApiError('');
     
     try {
-      if (email) {
+      if (isFirebaseAuth && phone) {
+        // Resend Firebase phone OTP
+        const result = await phoneAuthService.sendOTP(phone);
+        
+        if (result.success) {
+          setTimer(60);
+          setCanResend(false);
+          setApiError('');
+        } else {
+          setApiError(result.error || 'Failed to resend OTP');
+        }
+      } else if (email) {
+        // Resend email OTP
         await apiClient.sendEmailOTP(email);
+        setTimer(60);
+        setCanResend(false);
+        setApiError('');
       }
-      
-      setTimer(60);
-      setCanResend(false);
-      setApiError('');
     } catch (error) {
       console.error('Resend OTP error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to resend OTP. Please try again.';
@@ -107,6 +142,11 @@ export default function OTPVerification() {
 
   return (
     <View style={styles.container}>
+      {/* reCAPTCHA container for web phone auth */}
+      {Platform.OS === 'web' && isFirebaseAuth && (
+        <div id="recaptcha-container" style={{ display: 'none' }}></div>
+      )}
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="#374151" />
