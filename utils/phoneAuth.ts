@@ -1,16 +1,9 @@
 import { auth } from './firebase';
-import { 
-  PhoneAuthProvider, 
-  signInWithCredential, 
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult
-} from 'firebase/auth';
 import { Platform } from 'react-native';
 
 class PhoneAuthService {
-  private recaptchaVerifier: RecaptchaVerifier | null = null;
-  private confirmationResult: ConfirmationResult | null = null;
+  private confirmationResult: any = null;
+  private recaptchaVerifier: any = null;
 
   // Check if Firebase Auth is available
   private checkAuth(): boolean {
@@ -22,9 +15,11 @@ class PhoneAuthService {
   }
 
   // Initialize reCAPTCHA for web
-  private initializeRecaptcha() {
+  private async initializeRecaptcha() {
     if (Platform.OS === 'web' && !this.recaptchaVerifier && this.checkAuth()) {
       try {
+        const { RecaptchaVerifier } = await import('firebase/auth');
+        
         // Create reCAPTCHA container if it doesn't exist
         if (!document.getElementById('recaptcha-container')) {
           const container = document.createElement('div');
@@ -75,18 +70,21 @@ class PhoneAuthService {
       console.log('Sending OTP to:', formattedPhone);
       
       if (Platform.OS === 'web') {
-        this.initializeRecaptcha();
+        // Web implementation using Firebase JS SDK
+        await this.initializeRecaptcha();
         if (!this.recaptchaVerifier) {
           return { success: false, error: 'reCAPTCHA not available' };
         }
+        
+        const { signInWithPhoneNumber } = await import('firebase/auth');
         this.confirmationResult = await signInWithPhoneNumber(
-          auth!, 
+          auth, 
           formattedPhone, 
           this.recaptchaVerifier
         );
       } else {
-        // For React Native (iOS/Android)
-        this.confirmationResult = await signInWithPhoneNumber(auth!, formattedPhone);
+        // React Native implementation
+        this.confirmationResult = await auth.signInWithPhoneNumber(formattedPhone);
       }
 
       console.log('OTP sent successfully');
@@ -149,28 +147,6 @@ class PhoneAuthService {
       return { 
         success: false, 
         error: errorMessage
-      };
-    }
-  }
-
-  // Alternative method using verification ID (for native apps)
-  async verifyWithCredential(verificationId: string, otp: string) {
-    try {
-      if (!this.checkAuth()) {
-        return { success: false, error: 'Firebase Auth not available' };
-      }
-
-      const credential = PhoneAuthProvider.credential(verificationId, otp);
-      const result = await signInWithCredential(auth!, credential);
-      return { 
-        success: true, 
-        user: result.user 
-      };
-    } catch (error: any) {
-      console.error('Verify credential error:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Verification failed' 
       };
     }
   }
