@@ -11,11 +11,13 @@ import { ArrowLeft } from 'lucide-react-native';
 
 export default function OTPVerification() {
   const router = useRouter();
-  const { email, phone, role, useFirebase } = useLocalSearchParams<{
+  const { email, phone, role, useFirebase, name, isSignup } = useLocalSearchParams<{
     email?: string;
     phone?: string;
     role: 'farmer' | 'labour';
     useFirebase?: string;
+    name?: string;
+    isSignup?: string;
   }>();
   const { t } = useLanguage();
   const { login } = useAuth();
@@ -28,6 +30,7 @@ export default function OTPVerification() {
   const [apiError, setApiError] = useState<string>('');
 
   const isFirebaseAuth = useFirebase === 'true';
+  const isSignupFlow = isSignup === 'true';
 
   useEffect(() => {
     if (timer > 0) {
@@ -39,6 +42,15 @@ export default function OTPVerification() {
       setCanResend(true);
     }
   }, [timer]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isFirebaseAuth) {
+        phoneAuthService.clearSession();
+      }
+    };
+  }, [isFirebaseAuth]);
 
   const handleVerifyOTP = async () => {
     if (!otp.trim() || otp.length !== 6) {
@@ -57,13 +69,28 @@ export default function OTPVerification() {
         if (result.success && result.user) {
           // Create user object for your auth context
           const user = {
-            name: result.user.displayName || 'User',
+            name: name || result.user.displayName || 'User',
             phone: result.user.phoneNumber,
             role: role,
           };
 
           // Get Firebase ID token for your backend
           const token = await result.user.getIdToken();
+          
+          // If this is a signup flow, you might want to call your backend
+          // to create the user record with additional info
+          if (isSignupFlow) {
+            try {
+              await apiClient.signup({
+                name: user.name,
+                phone: user.phone,
+                role: role,
+              });
+            } catch (signupError) {
+              console.log('Backend signup error (continuing anyway):', signupError);
+              // Continue even if backend signup fails
+            }
+          }
           
           await login(token, user);
           
@@ -82,7 +109,7 @@ export default function OTPVerification() {
 
         if (response?.token) {
           const user = {
-            name: 'User', // This would come from the token
+            name: name || 'User',
             email: email,
             role: role,
           };
@@ -166,6 +193,12 @@ export default function OTPVerification() {
           <Text style={styles.subtitle}>
             {t('auth.otpSubtitle')} {email || phone}
           </Text>
+          
+          {isFirebaseAuth && (
+            <Text style={styles.firebaseNote}>
+              Using Firebase SMS verification
+            </Text>
+          )}
 
           <Input
             placeholder={t('auth.otpPlaceholder')}
@@ -245,7 +278,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 8,
+  },
+  firebaseNote: {
+    fontSize: 12,
+    color: '#8B5CF6',
+    textAlign: 'center',
+    marginBottom: 24,
+    fontStyle: 'italic',
   },
   otpInput: {
     textAlign: 'center',

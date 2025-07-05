@@ -12,10 +12,27 @@ class PhoneAuthService {
   private recaptchaVerifier: RecaptchaVerifier | null = null;
   private confirmationResult: ConfirmationResult | null = null;
 
+  // Check if Firebase Auth is available
+  private checkAuth(): boolean {
+    if (!auth) {
+      console.error('Firebase Auth not initialized');
+      return false;
+    }
+    return true;
+  }
+
   // Initialize reCAPTCHA for web
   private initializeRecaptcha() {
-    if (Platform.OS === 'web' && !this.recaptchaVerifier) {
+    if (Platform.OS === 'web' && !this.recaptchaVerifier && this.checkAuth()) {
       try {
+        // Create reCAPTCHA container if it doesn't exist
+        if (!document.getElementById('recaptcha-container')) {
+          const container = document.createElement('div');
+          container.id = 'recaptcha-container';
+          container.style.display = 'none';
+          document.body.appendChild(container);
+        }
+
         this.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
           callback: () => {
@@ -23,16 +40,23 @@ class PhoneAuthService {
           },
           'expired-callback': () => {
             console.log('reCAPTCHA expired');
+            this.recaptchaVerifier = null;
           }
         });
+        console.log('reCAPTCHA initialized');
       } catch (error) {
         console.error('reCAPTCHA initialization error:', error);
+        this.recaptchaVerifier = null;
       }
     }
   }
 
   async sendOTP(phoneNumber: string): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!this.checkAuth()) {
+        return { success: false, error: 'Firebase Auth not available' };
+      }
+
       // Format phone number (ensure it starts with country code)
       let formattedPhone = phoneNumber.trim();
       
@@ -53,16 +77,16 @@ class PhoneAuthService {
       if (Platform.OS === 'web') {
         this.initializeRecaptcha();
         if (!this.recaptchaVerifier) {
-          throw new Error('reCAPTCHA not initialized');
+          return { success: false, error: 'reCAPTCHA not available' };
         }
         this.confirmationResult = await signInWithPhoneNumber(
-          auth, 
+          auth!, 
           formattedPhone, 
           this.recaptchaVerifier
         );
       } else {
         // For React Native (iOS/Android)
-        this.confirmationResult = await signInWithPhoneNumber(auth, formattedPhone);
+        this.confirmationResult = await signInWithPhoneNumber(auth!, formattedPhone);
       }
 
       console.log('OTP sent successfully');
@@ -77,6 +101,8 @@ class PhoneAuthService {
         errorMessage = 'Too many requests. Please try again later';
       } else if (error.code === 'auth/quota-exceeded') {
         errorMessage = 'SMS quota exceeded. Please try again later';
+      } else if (error.code === 'auth/captcha-check-failed') {
+        errorMessage = 'Captcha verification failed. Please try again';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -90,6 +116,10 @@ class PhoneAuthService {
 
   async verifyOTP(otp: string): Promise<{ success: boolean; user?: any; error?: string }> {
     try {
+      if (!this.checkAuth()) {
+        return { success: false, error: 'Firebase Auth not available' };
+      }
+
       if (!this.confirmationResult) {
         return { success: false, error: 'No OTP request found. Please request OTP first.' };
       }
@@ -110,6 +140,8 @@ class PhoneAuthService {
         errorMessage = 'Invalid verification code';
       } else if (error.code === 'auth/code-expired') {
         errorMessage = 'Verification code has expired';
+      } else if (error.code === 'auth/session-expired') {
+        errorMessage = 'Session expired. Please request a new OTP';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -124,8 +156,12 @@ class PhoneAuthService {
   // Alternative method using verification ID (for native apps)
   async verifyWithCredential(verificationId: string, otp: string) {
     try {
+      if (!this.checkAuth()) {
+        return { success: false, error: 'Firebase Auth not available' };
+      }
+
       const credential = PhoneAuthProvider.credential(verificationId, otp);
-      const result = await signInWithCredential(auth, credential);
+      const result = await signInWithCredential(auth!, credential);
       return { 
         success: true, 
         user: result.user 
@@ -143,7 +179,11 @@ class PhoneAuthService {
   clearSession() {
     this.confirmationResult = null;
     if (Platform.OS === 'web' && this.recaptchaVerifier) {
-      this.recaptchaVerifier.clear();
+      try {
+        this.recaptchaVerifier.clear();
+      } catch (error) {
+        console.log('Error clearing reCAPTCHA:', error);
+      }
       this.recaptchaVerifier = null;
     }
   }
