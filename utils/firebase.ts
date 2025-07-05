@@ -16,19 +16,31 @@ const firebaseConfig = {
 let app;
 let auth;
 
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
-}
+try {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
 
-// Initialize Auth with persistence for React Native
-if (Platform.OS !== 'web') {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
-} else {
-  auth = getAuth(app);
+  // Initialize Auth with persistence for React Native
+  if (Platform.OS !== 'web') {
+    try {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+      });
+    } catch (error) {
+      // If initializeAuth fails, fall back to getAuth
+      console.log('Falling back to getAuth');
+      auth = getAuth(app);
+    }
+  } else {
+    auth = getAuth(app);
+  }
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  // Create a fallback auth object to prevent crashes
+  auth = null;
 }
 
 export { app, auth };
