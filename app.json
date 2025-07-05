@@ -10,7 +10,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.noctivagous.boltexponativewind"
+      "bundleIdentifier": "com.noctivagous.boltexponativewind",
+      "googleServicesFile": "./GoogleService-Info.plist"
+    },
+    "android": {
+      "package": "com.noctivagous.boltexponativewind",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -20,7 +25,9 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true
@@ -30,9 +37,6 @@
       "eas": {
         "projectId": "123b112e-3ab6-40f1-8eab-ce555c22f8f2"
       }
-    },
-    "android": {
-      "package": "com.noctivagous.boltexponativewind"
     }
   }
 }
