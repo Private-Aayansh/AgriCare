@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Search, Filter, PlusSquare, Trash2, MapPin, Calendar, Users, DollarSign, Clock, Star, Briefcase } from 'lucide-react-native';
+import { Search, Filter, SquarePlus as PlusSquare, Trash2, MapPin, Calendar, Users, DollarSign, Clock, Star, Briefcase } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { apiClient } from '../../utils/api';
 import { Job } from '../../types/job';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
-import { MapPin, Calendar, Briefcase, MessageSquare, AlertCircle, Filter, DollarSign, Users, Clock, Star } from 'lucide-react-native';
+import { MapPin, Calendar, Briefcase, MessageSquare, CircleAlert as AlertCircle, Filter, DollarSign, Users, Clock, Star } from 'lucide-react-native';
 import { apiClient } from '../../utils/api';
 import { getCurrentLocation, requestLocationPermission } from '../../utils/location';
 import { Job } from '../../types/job';
