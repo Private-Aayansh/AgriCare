@@ -58,9 +58,16 @@ export default function LabourJobs() {
   }, [fetchNearbyJobs]);
 
   const handleMessagePress = (job: Job) => {
-    // Navigate to chat screen with farmer info
-    router.push(`/chat/${job.farmer_id}`);
-    Alert.alert('Coming Soon', 'The chat functionality will be implemented in a future update.');
+    // Navigate to chat screen
+    router.push({
+      pathname: '/chat',
+      params: {
+        farmerId: job.farmer_id?.toString() || '1',
+        farmerName: job.farmer_name || 'Farmer',
+        jobId: job.id.toString(),
+        jobTitle: job.title,
+      },
+    });
   };
 
   const handleRadiusChange = (newRadius: number) => {

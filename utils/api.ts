@@ -174,6 +174,12 @@ export class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async getFirebaseToken() {
+    return this.request<{ firebase_token: string }>('/api/firebase-token', {
+      method: 'POST',
+    });
+  }
 }''
 
 export const apiClient = ApiClient.getInstance();

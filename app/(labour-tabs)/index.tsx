@@ -82,18 +82,16 @@ export default function LabourHome() {
     
 
   const handleMessageFarmer = (job: Job) => {
-    // Navigate to chat or show message interface
-    Alert.alert(
-      'Message Farmer',
-      `Send a message to the farmer about "${job.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Message', onPress: () => {
-          // TODO: Implement messaging functionality
-          Alert.alert('Success', 'Message sent to farmer!');
-        }},
-      ]
-    );
+    // Navigate to chat screen
+    router.push({
+      pathname: '/chat',
+      params: {
+        farmerId: job.farmer_id?.toString() || '1',
+        farmerName: job.farmer_name || 'Farmer',
+        jobId: job.id.toString(),
+        jobTitle: job.title,
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {
