@@ -20,7 +20,7 @@ export default function Index() {
         }
       } else {
         // User is not authenticated, redirect to auth flow
-        router.replace('/auth/role-selection');
+        router.replace('/auth/login');
       }
     }
   }, [isLoading, hasSeenLanguageSelector, user, token, router]);

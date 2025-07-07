@@ -8,16 +8,16 @@ import { Input } from '../../components/Input';
 import { apiClient } from '../../utils/api';
 import { phoneAuthService } from '../../utils/phoneAuth';
 import { ArrowLeft } from 'lucide-react-native';
+import { jwtDecode } from 'jwt-decode';
 
 export default function OTPVerification() {
   const router = useRouter();
-  const { email, phone, role, useFirebase, name, isSignup } = useLocalSearchParams<{
+  const { email, phone, role, useFirebase, name } = useLocalSearchParams<{
     email?: string;
     phone?: string;
     role: 'farmer' | 'labour';
     useFirebase?: string;
     name?: string;
-    isSignup?: string;
   }>();
   const { t } = useLanguage();
   const { login } = useAuth();
@@ -30,7 +30,6 @@ export default function OTPVerification() {
   const [apiError, setApiError] = useState<string>('');
 
   const isFirebaseAuth = useFirebase === 'true';
-  const isSignupFlow = isSignup === 'true';
 
   useEffect(() => {
     if (timer > 0) {
@@ -60,69 +59,65 @@ export default function OTPVerification() {
 
     setLoading(true);
     setApiError('');
-    
+
     try {
-      if (isFirebaseAuth && phone) {
-        // Firebase phone verification
-        const result = await phoneAuthService.verifyOTP(otp);
-        
-        if (result.success && result.user) {
-          // Create user object for your auth context
-          const user = {
-            name: name || result.user.displayName || 'User',
-            phone: result.user.phoneNumber,
-            role: role,
-          };
+      let token;
 
-          // Get Firebase ID token for your backend
-          const token = await result.user.getIdToken();
-          
-          // If this is a signup flow, you might want to call your backend
-          // to create the user record with additional info
-          if (isSignupFlow) {
-            try {
-              await apiClient.signup({
-                name: user.name,
-                phone: user.phone,
-                role: role,
-              });
-            } catch (signupError) {
-              console.log('Backend signup error (continuing anyway):', signupError);
-              // Continue even if backend signup fails
-            }
-          }
-          
-          await login(token, user);
-          
-          // Navigate to appropriate dashboard
-          if (role === 'farmer') {
-            router.replace('/(farmer-tabs)');
+      // Signup flow is identified by the presence of the 'role' parameter
+      if (role) {
+        if (email) {
+          // For email signup, the user is already created and OTP sent.
+          // We just need to verify the OTP to log in.
+          const response = await apiClient.verifyEmailLogin(email, otp);
+          token = response.token;
+        } else if (isFirebaseAuth && phone) {
+          // For phone signup, we verify with Firebase, then create the user, then log in.
+          const result = await phoneAuthService.verifyOTP(otp);
+          if (result.success && result.user) {
+            const idToken = await result.user.getIdToken();
+            // The backend should handle user creation and login in one step if they don't exist
+            const response = await apiClient.verifyPhoneLogin(idToken);
+            token = response.token;
           } else {
-            router.replace('/(labour-tabs)');
+            setApiError(result.error || 'Phone verification failed');
+            return;
           }
+        }
+      } else {
+        // This is a standard login flow
+        if (email) {
+          const response = await apiClient.verifyEmailLogin(email, otp);
+          token = response.token;
+        } else if (isFirebaseAuth && phone) {
+          const result = await phoneAuthService.verifyOTP(otp);
+          if (result.success && result.user) {
+            const idToken = await result.user.getIdToken();
+            const response = await apiClient.verifyPhoneLogin(idToken);
+            token = response.token;
+          } else {
+            setApiError(result.error || 'Phone verification failed');
+            return;
+          }
+        }
+      }
+
+      if (token) {
+        const decodedToken: any = jwtDecode(token);
+        const user = {
+          name: decodedToken.name,
+          email: decodedToken.email || email,
+          phone: decodedToken.phone || phone,
+          role: decodedToken.role,
+        };
+        await login(token, user);
+
+        if (user.role === 'farmer') {
+          router.replace('/(farmer-tabs)');
         } else {
-          setApiError(result.error || 'Phone verification failed');
+          router.replace('/(labour-tabs)');
         }
-      } else if (email) {
-        // Email OTP verification (existing flow)
-        const response = await apiClient.verifyEmailOTP(email, otp);
-
-        if (response?.token) {
-          const user = {
-            name: name || 'User',
-            email: email,
-            role: role,
-          };
-          
-          await login(response.token, user);
-          
-          // Navigate to appropriate dashboard
-          if (role === 'farmer') {
-            router.replace('/(farmer-tabs)');
-          } else {
-            router.replace('/(labour-tabs)');
-          }
-        }
+      } else {
+        setApiError('Verification failed: No token received.');
       }
     } catch (error) {
       console.error('OTP verification error:', error);

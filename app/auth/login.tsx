@@ -10,7 +10,6 @@ import { ArrowLeft, Mail, Phone } from 'lucide-react-native';
 
 export default function Login() {
   const router = useRouter();
-  const { role } = useLocalSearchParams<{ role: 'farmer' | 'labour' }>();
   const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
@@ -52,13 +51,12 @@ export default function Login() {
     try {
       if (useEmail) {
         // Email OTP flow (existing)
-        await apiClient.sendEmailOTP(formData.email);
+        await apiClient.loginEmail(formData.email);
         
         // Navigate to OTP verification
         router.push({
           pathname: '/auth/otp-verification',
           params: {
-            role: role!,
             email: formData.email,
           },
         });
@@ -71,7 +69,6 @@ export default function Login() {
           router.push({
             pathname: '/auth/otp-verification',
             params: {
-              role: role!,
               phone: formData.phone,
               useFirebase: 'true', // Flag to indicate Firebase phone auth
             },
@@ -166,10 +163,7 @@ export default function Login() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
           <TouchableOpacity
-            onPress={() => router.push({
-              pathname: '/auth/signup',
-              params: { role: role! },
-            })}
+            onPress={() => router.push('/auth/role-selection')}
           >
             <Text style={styles.footerLink}>{t('common.signup')}</Text>
           </TouchableOpacity>

@@ -50,12 +50,17 @@ export class ApiClient {
         try {
           // Try to parse JSON error response
           const errorData = await response.json();
-          if (errorData.detail) {
-            errorMessage = errorData.detail;
-          } else if (errorData.message) {
-            errorMessage = errorData.message;
+          const message = errorData.detail || errorData.message || errorData.error;
+          
+          if (typeof message === 'string') {
+            errorMessage = message;
+          } else if (message) {
+            errorMessage = JSON.stringify(message);
           } else if (typeof errorData === 'string') {
             errorMessage = errorData;
+          } else {
+            // Fallback for unknown error structure
+            errorMessage = `Server returned status ${response.status}`;
           }
         } catch {
           // If JSON parsing fails, try to get text
@@ -63,25 +68,12 @@ export class ApiClient {
             const errorText = await response.text();
             if (errorText) {
               errorMessage = errorText;
+            } else {
+              errorMessage = `Server returned status ${response.status}`;
             }
           } catch {
             // If all else fails, use status-based message
-            switch (response.status) {
-              case 400:
-                errorMessage = 'Invalid request. Please check your input.';
-                break;
-              case 401:
-                errorMessage = 'Authentication failed. Please try again.';
-                break;
-              case 404:
-                errorMessage = 'Service not found. Please try again later.';
-                break;
-              case 500:
-                errorMessage = 'Server error. Please try again later.';
-                break;
-              default:
-                errorMessage = `Server error (${response.status}). Please try again.`;
-            }
+            errorMessage = `Request failed with status ${response.status}`;
           }
         }
         
@@ -109,9 +101,10 @@ export class ApiClient {
 
   async signup(data: {
     name: string;
+    role: 'farmer' | 'labour';
     email?: string;
     phone?: string;
-    role: 'farmer' | 'labour';
+    idToken?: string;
   }) {
     return this.request('/api/signup', {
       method: 'POST',
@@ -119,22 +112,22 @@ export class ApiClient {
     });
   }
 
-  async sendEmailOTP(email: string) {
+  async loginEmail(email: string) {
     return this.request('/api/login/email', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
   }
 
-  async verifyEmailOTP(email: string, otp: string) {
-    return this.request<{ token: string }>('/api/login/email/verify', {
+  async verifyEmailLogin(email: string, otp: string) {
+    return this.request<{ token: string, user: any }>('/api/login/email/verify', {
       method: 'POST',
       body: JSON.stringify({ email, otp }),
     });
   }
 
-  async verifyPhoneOTP(idToken: string) {
-    return this.request<{ token: string }>('/api/login/phone/verify', {
+  async verifyPhoneLogin(idToken: string) {
+    return this.request<{ token: string, user: any }>('/api/login/phone/verify', {
       method: 'POST',
       body: JSON.stringify({ id_token: idToken }),
     });
@@ -165,10 +158,22 @@ export class ApiClient {
       k: k.toString(),
     });
     
-    return this.request<any[]>(`/api/job?${params.toString()}`, {
+    return this.request<any[]>(`/api/nearby-jobs?${params.toString()}`, {
       method: 'GET',
     });
   }
-}
+
+  async getJobs() {
+    return this.request<any[]>('/api/job', {
+      method: 'GET',
+    });
+  }
+
+  async deleteJob(jobId: number) {
+    return this.request(`/api/job/${jobId}`, {
+      method: 'DELETE',
+    });
+  }
+}''
 
 export const apiClient = ApiClient.getInstance();

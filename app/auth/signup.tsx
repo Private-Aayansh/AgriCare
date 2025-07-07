@@ -55,31 +55,29 @@ export default function Signup() {
     setApiError('');
     
     try {
-      if (useEmail) {
-        // Email signup flow (existing)
-        const signupData = {
-          name: formData.name,
-          role: role!,
-          email: formData.email,
-        };
+      const signupData = {
+        name: formData.name,
+        role: role!,
+        ...(useEmail ? { email: formData.email } : { phone: formData.phone }),
+      };
 
-        await apiClient.signup(signupData);
-        
-        // Navigate to OTP verification
+      await apiClient.signup(signupData); // First, send signup request
+
+      if (useEmail) {
+        // If email signup, send OTP for login
+        await apiClient.loginEmail(formData.email);
         router.push({
           pathname: '/auth/otp-verification',
           params: {
             role: role!,
             email: formData.email,
+            isSignup: 'true', // Indicate that this is part of a signup flow
           },
         });
       } else {
-        // Phone signup flow using Firebase
+        // If phone signup, initiate Firebase phone auth
         const result = await phoneAuthService.sendOTP(formData.phone);
-        
         if (result.success) {
-          // For phone signup, we'll handle user creation after OTP verification
-          // Navigate to OTP verification with phone and signup data
           router.push({
             pathname: '/auth/otp-verification',
             params: {

@@ -23,7 +23,7 @@ export default function LanguageSelector() {
       await setLanguage(selectedLanguage);
     }
     await setHasSeenLanguageSelector(true);
-    router.replace('/auth/role-selection');
+    router.replace('/auth/login');
   };
 
   return (

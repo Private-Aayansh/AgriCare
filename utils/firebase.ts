@@ -23,12 +23,13 @@ if (Platform.OS !== 'web') {
     const { getAuth } = require('firebase/auth');
     
     const firebaseConfig = {
-      apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-      authDomain: "your-project.firebaseapp.com",
-      projectId: "your-project-id",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456",
+      apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
+      authDomain: "agricare-68b19.firebaseapp.com",
+      projectId: "agricare-68b19",
+      storageBucket: "agricare-68b19.appspot.com",
+      messagingSenderId: "872782355781",
+      appId: "1:872782355781:web:3d2aada85d4f2c9519b22c",
+      measurementId: "G-NHZ569079X"
     };
 
     if (getApps().length === 0) {
