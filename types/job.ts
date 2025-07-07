@@ -12,6 +12,7 @@ export interface Job {
   end_date?: string;
   status: number;
   farmer_name?: string;
+  farmer_id?: number;
   created_at?: string;
   distance?: number;
 }

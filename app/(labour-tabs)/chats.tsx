@@ -1,40 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { MessageCircle, Search, Phone, Video } from 'lucide-react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { firebaseChatService, Chat } from '../../utils/firebaseChat';
+import { MessageCircle, Search, Phone, Video, Briefcase } from 'lucide-react-native';
 
 export default function LabourChats() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const router = useRouter();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const chats = [
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      lastMessage: 'When can you start the harvesting work?',
-      time: '11:30 AM',
-      unread: 1,
-      avatar: 'RK',
-      type: 'farmer',
-    },
-    {
-      id: 2,
-      name: 'Priya Singh',
-      lastMessage: 'The rice planting job is confirmed',
-      time: '10:15 AM',
-      unread: 0,
-      avatar: 'PS',
-      type: 'farmer',
-    },
-    {
-      id: 3,
-      name: 'Amit Sharma',
-      lastMessage: 'Great work on the irrigation setup',
-      time: 'Yesterday',
-      unread: 0,
-      avatar: 'AS',
-      type: 'farmer',
-    },
-  ];
+  useEffect(() => {
+    initializeChats();
+  }, []);
+
+  const initializeChats = async () => {
+    try {
+      if (!user) return;
+
+      // Initialize Firebase auth
+      const authSuccess = await firebaseChatService.initializeAuth();
+      if (!authSuccess) {
+        console.error('Failed to initialize Firebase auth');
+        setLoading(false);
+        return;
+      }
+
+      // Subscribe to chats
+      const unsubscribe = firebaseChatService.subscribeToChats(user.name, (userChats) => {
+        setChats(userChats);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Chat initialization error:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleChatPress = (chat: Chat) => {
+    router.push({
+      pathname: '/chat',
+      params: {
+        farmerId: chat.farmerId,
+        farmerName: chat.farmerName,
+        jobId: chat.jobId.toString(),
+        jobTitle: chat.jobTitle,
+      },
+    });
+  };
+
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return '';
+    
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      date = new Date(timestamp);
+    }
+    
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } else {
+      return date.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+      });
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <View style={styles.container}>
@@ -46,39 +101,71 @@ export default function LabourChats() {
       </View>
 
       <ScrollView style={styles.chatList} showsVerticalScrollIndicator={false}>
-        {chats.map((chat) => (
-          <TouchableOpacity key={chat.id} style={styles.chatItem}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>{chat.avatar}</Text>
-            </View>
-            
-            <View style={styles.chatContent}>
-              <View style={styles.chatHeader}>
-                <Text style={styles.chatName}>{chat.name}</Text>
-                <Text style={styles.chatTime}>{chat.time}</Text>
-              </View>
-              <View style={styles.chatFooter}>
-                <Text style={styles.lastMessage} numberOfLines={1}>
-                  {chat.lastMessage}
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Loading chats...</Text>
+          </View>
+        ) : chats.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <MessageCircle size={64} color="#D1D5DB" />
+            <Text style={styles.emptyText}>No chats yet</Text>
+            <Text style={styles.emptySubtext}>
+              Start a conversation by messaging farmers about their jobs
+            </Text>
+          </View>
+        ) : (
+          chats.map((chat) => (
+            <TouchableOpacity 
+              key={chat.id} 
+              style={styles.chatItem}
+              onPress={() => handleChatPress(chat)}
+            >
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>
+                  {getInitials(chat.farmerName)}
                 </Text>
-                {chat.unread > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadText}>{chat.unread}</Text>
-                  </View>
-                )}
               </View>
-            </View>
+              
+              <View style={styles.chatContent}>
+                <View style={styles.chatHeader}>
+                  <Text style={styles.chatName}>{chat.farmerName}</Text>
+                  <Text style={styles.chatTime}>
+                    {formatTime(chat.lastMessageTime)}
+                  </Text>
+                </View>
+                
+                <View style={styles.jobInfo}>
+                  <Briefcase size={12} color="#6B7280" />
+                  <Text style={styles.jobTitle} numberOfLines={1}>
+                    {chat.jobTitle}
+                  </Text>
+                </View>
+                
+                <View style={styles.chatFooter}>
+                  <Text style={styles.lastMessage} numberOfLines={1}>
+                    {chat.lastMessage || 'No messages yet'}
+                  </Text>
+                  {user && chat.unreadCount[user.name] > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadText}>
+                        {chat.unreadCount[user.name]}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
 
-            <View style={styles.chatActions}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Phone size={20} color="#6B7280" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Video size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.chatActions}>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Phone size={20} color="#6B7280" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Video size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       <TouchableOpacity style={styles.fab}>
@@ -115,6 +202,27 @@ const styles = StyleSheet.create({
   chatList: {
     flex: 1,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -150,6 +258,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
+  },
+  jobInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  jobTitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
   },
   chatTime: {
     fontSize: 12,

@@ -17,6 +17,7 @@ export default function RootLayout() {
           <Stack.Screen name="(farmer-tabs)" />
           <Stack.Screen name="(labour-tabs)" />
           <Stack.Screen name="profile" />
+          <Stack.Screen name="chat" />
           <Stack.Screen name="create-job-modal" options={{ presentation: 'modal' }} />
           <Stack.Screen name="+not-found" />
         </Stack>
