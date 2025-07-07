@@ -9,6 +9,7 @@ const i18n = new I18n({
       back: 'Back',
       submit: 'Submit',
       cancel: 'Cancel',
+      delete: 'Delete',
       loading: 'Loading...',
       error: 'Error',
       success: 'Success',
@@ -56,7 +57,7 @@ const i18n = new I18n({
       farmer: {
         home: 'Home',
         chats: 'Chats',
-        labours: 'Labours',
+        labours: 'Jobs',
         services: 'Services',
       },
       labour: {
@@ -71,6 +72,27 @@ const i18n = new I18n({
       changeLanguage: 'Change Language',
       role: 'Role',
     },
+    // Job Management
+    jobCard: {
+      deleteConfirmationTitle: 'Delete Job',
+      deleteConfirmationMessage: 'Are you sure you want to delete this job? This action cannot be undone.',
+      deleteSuccessTitle: 'Job Deleted',
+      deleteSuccessMessage: 'The job has been successfully deleted.',
+    },
+    // Job List
+    jobList: {
+      noJobs: {
+        title: 'No Jobs Posted',
+        subtitle: 'Create your first job posting to find labourers in your area.',
+      },
+    },
+    // Errors
+    errors: {
+      fetchErrorTitle: 'Error Loading Jobs',
+      fetchErrorMessage: 'Unable to load jobs. Please check your connection and try again.',
+      deleteErrorTitle: 'Delete Failed',
+      deleteErrorMessage: 'Unable to delete the job. Please try again.',
+    },
   },
   hi: {
     // Common
@@ -79,6 +101,7 @@ const i18n = new I18n({
       back: 'वापस',
       submit: 'जमा करें',
       cancel: 'रद्द करें',
+      delete: 'हटाएं',
       loading: 'लोड हो रहा है...',
       error: 'त्रुटि',
       success: 'सफलता',
@@ -126,7 +149,7 @@ const i18n = new I18n({
       farmer: {
         home: 'होम',
         chats: 'चैट',
-        labours: 'मजदूर',
+        labours: 'काम',
         services: 'सेवाएं',
       },
       labour: {
@@ -140,6 +163,27 @@ const i18n = new I18n({
       title: 'प्रोफाइल',
       changeLanguage: 'भाषा बदलें',
       role: 'भूमिका',
+    },
+    // Job Management
+    jobCard: {
+      deleteConfirmationTitle: 'काम हटाएं',
+      deleteConfirmationMessage: 'क्या आप वाकई इस काम को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
+      deleteSuccessTitle: 'काम हटा दिया गया',
+      deleteSuccessMessage: 'काम सफलतापूर्वक हटा दिया गया है।',
+    },
+    // Job List
+    jobList: {
+      noJobs: {
+        title: 'कोई काम पोस्ट नहीं किया गया',
+        subtitle: 'अपने क्षेत्र में मजदूर खोजने के लिए अपना पहला काम पोस्ट करें।',
+      },
+    },
+    // Errors
+    errors: {
+      fetchErrorTitle: 'काम लोड करने में त्रुटि',
+      fetchErrorMessage: 'काम लोड करने में असमर्थ। कृपया अपना कनेक्शन जांचें और पुनः प्रयास करें।',
+      deleteErrorTitle: 'हटाना असफल',
+      deleteErrorMessage: 'काम हटाने में असमर्थ। कृपया पुनः प्रयास करें।',
     },
   },
 });

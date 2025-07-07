@@ -31,10 +31,10 @@ export default function FarmerLabours() {
     }, [])
   );
 
-  const handleDeleteJob = async (jobId: number) => {
+  const handleDeleteJob = async (job: Job) => {
     Alert.alert(
       t('jobCard.deleteConfirmationTitle'),
-      t('jobCard.deleteConfirmationMessage'),
+      `${t('jobCard.deleteConfirmationMessage')}\n\nJob: "${job.title}"`,
       [
         {
           text: t('common.cancel'),
@@ -44,8 +44,8 @@ export default function FarmerLabours() {
           text: t('common.delete'),
           onPress: async () => {
             try {
-              await apiClient.deleteJob(jobId);
-              setJobs(jobs.filter(job => job.id !== jobId));
+              await apiClient.deleteJob(job.id);
+              setJobs(jobs.filter(j => j.id !== job.id));
               Alert.alert(t('jobCard.deleteSuccessTitle'), t('jobCard.deleteSuccessMessage'));
             } catch (error) {
               console.error('Failed to delete job:', error);
@@ -128,7 +128,11 @@ export default function FarmerLabours() {
                     <Text style={styles.statusText}>{getStatusText(job.status)}</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteJob(job.id)} style={styles.deleteButton}>
+                <TouchableOpacity 
+                  onPress={() => handleDeleteJob(job)} 
+                  style={styles.deleteButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <Trash2 size={20} color="#EF4444" />
                 </TouchableOpacity>
               </View>
@@ -335,6 +339,8 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 10,
     backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   jobDescription: {
     fontSize: 16,
