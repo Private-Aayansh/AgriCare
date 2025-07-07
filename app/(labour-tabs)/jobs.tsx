@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
-import { MapPin, Calendar, Briefcase, MessageSquare, AlertCircle, Filter } from 'lucide-react-native';
+import { MapPin, Calendar, Briefcase, MessageSquare, AlertCircle, Filter, DollarSign, Users, Clock, Star } from 'lucide-react-native';
 import { apiClient } from '../../utils/api';
 import { getCurrentLocation, requestLocationPermission } from '../../utils/location';
 import { Job } from '../../types/job';
@@ -68,6 +68,43 @@ export default function LabourJobs() {
     setShowRadiusModal(false);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusColor = (status: number) => {
+    switch (status) {
+      case 1: return '#22C55E'; // Active
+      case 2: return '#F59E0B'; // In Progress
+      case 3: return '#6B7280'; // Completed
+      case 0: return '#EF4444'; // Cancelled
+      default: return '#6B7280';
+    }
+  };
+
+  const getStatusText = (status: number) => {
+    switch (status) {
+      case 1: return 'Open';
+      case 2: return 'In Progress';
+      case 3: return 'Completed';
+      case 0: return 'Cancelled';
+      default: return 'Unknown';
+    }
+  };
+
   const renderContent = () => {
     if (loading && !refreshing) {
       return (
@@ -93,6 +130,7 @@ export default function LabourJobs() {
     if (jobs.length === 0) {
       return (
         <View style={styles.centered}>
+          <Briefcase size={64} color="#D1D5DB" />
           <Text style={styles.emptyText}>No jobs found within {radius}km of your location.</Text>
           <Text style={styles.emptySubText}>Try increasing the search radius or check back later.</Text>
         </View>
@@ -108,30 +146,88 @@ export default function LabourJobs() {
         {jobs.map((job) => (
           <View key={job.id} style={styles.jobCard}>
             <View style={styles.jobHeader}>
-              <Text style={styles.jobTitle}>{job.title}</Text>
-              <Text style={styles.jobWage}>₹{job.daily_wage}/day</Text>
+              <View style={styles.jobTitleSection}>
+                <Text style={styles.jobTitle}>{job.title}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) }]}>
+                  <Text style={styles.statusText}>{getStatusText(job.status)}</Text>
+                </View>
+              </View>
+              <View style={styles.wageSection}>
+                <Text style={styles.jobWage}>₹{job.daily_wage}</Text>
+                <Text style={styles.wageLabel}>per day</Text>
+              </View>
             </View>
-            <Text style={styles.jobDescription}>{job.description}</Text>
+
+            <Text style={styles.jobDescription} numberOfLines={2}>{job.description}</Text>
+
+            <View style={styles.jobMetrics}>
+              <View style={styles.metricItem}>
+                <Users size={16} color="#3B82F6" />
+                <Text style={styles.metricText}>{job.number_of_labourers} needed</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <MapPin size={16} color="#EF4444" />
+                <Text style={styles.metricText}>{job.distance?.toFixed(2) ?? '...'} km away</Text>
+              </View>
+            </View>
 
             <View style={styles.jobDetails}>
-              <View style={styles.jobDetailItem}>
-                <MapPin size={14} color="#6B7280" />
-                <Text style={styles.jobDetailText}>{job.distance?.toFixed(2) ?? '...'} km away</Text>
-              </View>
-              <View style={styles.jobDetailItem}>
+              <View style={styles.detailRow}>
                 <Calendar size={14} color="#6B7280" />
-                <Text style={styles.jobDetailText}>Starts: {new Date(job.start_date).toLocaleDateString()}</Text>
+                <Text style={styles.detailText}>
+                  {formatDate(job.start_date)}
+                  {job.end_date && ` - ${formatDate(job.end_date)}`}
+                </Text>
               </View>
-              <View style={styles.jobDetailItem}>
-                <Briefcase size={14} color="#6B7280" />
-                <Text style={styles.jobDetailText}>{job.number_of_labourers} Labourers</Text>
+              <View style={styles.detailRow}>
+                <Clock size={14} color="#6B7280" />
+                <Text style={styles.detailText}>
+                  Starts at {formatTime(job.start_date)}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MapPin size={14} color="#6B7280" />
+                <Text style={styles.detailText}>{job.location}</Text>
               </View>
             </View>
-            
-            <TouchableOpacity style={styles.messageButton} onPress={() => handleMessagePress(job)}>
-              <MessageSquare size={18} color="#FFFFFF" />
-              <Text style={styles.messageButtonText}>Message</Text>
-            </TouchableOpacity>
+
+            {job.required_skills && job.required_skills.length > 0 && (
+              <View style={styles.skillsSection}>
+                <Text style={styles.skillsLabel}>Required Skills:</Text>
+                <View style={styles.skillsContainer}>
+                  {job.required_skills.slice(0, 3).map((skill, index) => (
+                    <View key={index} style={styles.skillBadge}>
+                      <Text style={styles.skillText}>{skill}</Text>
+                    </View>
+                  ))}
+                  {job.required_skills.length > 3 && (
+                    <View style={styles.skillBadge}>
+                      <Text style={styles.skillText}>+{job.required_skills.length - 3}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {job.perks && job.perks.length > 0 && (
+              <View style={styles.perksSection}>
+                <Star size={14} color="#F59E0B" />
+                <Text style={styles.perksText}>{job.perks.join(' • ')}</Text>
+              </View>
+            )}
+
+            <View style={styles.jobFooter}>
+              <View style={styles.farmerInfo}>
+                <Text style={styles.farmerText}>
+                  {job.farmer_name ? `by ${job.farmer_name}` : 'Posted recently'}
+                </Text>
+                <Text style={styles.jobId}>Job #{job.id}</Text>
+              </View>
+              <TouchableOpacity style={styles.messageButton} onPress={() => handleMessagePress(job)}>
+                <MessageSquare size={18} color="#FFFFFF" />
+                <Text style={styles.messageButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -142,7 +238,7 @@ export default function LabourJobs() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Nearby Jobs</Text>
-        <TouchableOpacity onPress={() => setShowRadiusModal(true)}>
+        <TouchableOpacity onPress={() => setShowRadiusModal(true)} style={styles.filterButton}>
           <Filter size={24} color="#1F2937" />
         </TouchableOpacity>
       </View>
@@ -160,7 +256,7 @@ export default function LabourJobs() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -171,26 +267,22 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E293B',
   },
-  filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  radiusLabel: {
-    fontSize: 16,
-    color: '#1F2937',
+  filterButton: {
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
   centered: {
     flex: 1,
@@ -201,20 +293,27 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6B7280',
+    color: '#64748B',
+    fontWeight: '500',
   },
   errorText: {
     marginTop: 12,
     fontSize: 16,
     color: '#DC2626',
     textAlign: 'center',
+    fontWeight: '500',
   },
   retryButton: {
     marginTop: 20,
     backgroundColor: '#8B4513',
     paddingVertical: 12,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 16,
+    shadowColor: '#8B4513',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   retryButtonText: {
     color: '#FFFFFF',
@@ -222,16 +321,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#64748B',
     textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubText: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 16,
+    color: '#94A3B8',
     textAlign: 'center',
-    marginTop: 8,
+    paddingHorizontal: 32,
   },
   jobsList: {
     flex: 1,
@@ -239,53 +340,163 @@ const styles = StyleSheet.create({
   },
   jobCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   jobHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  jobTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    flex: 1,
-    marginRight: 8,
-  },
-  jobWage: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#8B4513',
-  },
-  jobDescription: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
     marginBottom: 12,
   },
-  jobDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
+  jobTitleSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  jobTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  wageSection: {
+    alignItems: 'flex-end',
+  },
+  jobWage: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#8B4513',
+  },
+  wageLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  jobDescription: {
+    fontSize: 16,
+    color: '#64748B',
+    lineHeight: 24,
     marginBottom: 16,
   },
-  jobDetailItem: {
+  jobMetrics: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+  },
+  metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  jobDetailText: {
+  metricText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  jobDetails: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#64748B',
+    flex: 1,
+    fontWeight: '500',
+  },
+  skillsSection: {
+    marginBottom: 16,
+  },
+  skillsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  skillBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  skillText: {
     fontSize: 12,
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#1D4ED8',
+  },
+  perksSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  perksText: {
+    fontSize: 14,
+    color: '#92400E',
+    fontWeight: '500',
+    flex: 1,
+  },
+  jobFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  farmerInfo: {
+    flex: 1,
+  },
+  farmerText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  jobId: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   messageButton: {
     flexDirection: 'row',
@@ -293,11 +504,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#8B4513',
     paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    gap: 6,
+    shadowColor: '#8B4513',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   messageButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
