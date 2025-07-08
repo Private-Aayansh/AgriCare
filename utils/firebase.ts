@@ -23,12 +23,12 @@ if (Platform.OS !== 'web') {
   try {
     const firebaseConfig = {
       apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
-      authDomain: "expo-template-default-rtdb.firebaseapp.com",
-      databaseURL: "https://expo-template-default-rtdb-default-rtdb.firebaseio.com",
-      projectId: "expo-template-default-rtdb",
-      storageBucket: "expo-template-default-rtdb.appspot.com",
-      messagingSenderId: "644779229873",
-      appId: "1:644779229873:web:8cebc6dc40ff2748"
+  authDomain: "agricare-68b19.firebaseapp.com",
+  projectId: "agricare-68b19",
+  storageBucket: "agricare-68b19.firebasestorage.app",
+  messagingSenderId: "872782355781",
+  appId: "1:872782355781:web:3d2aada85d4f2c9519b22c",
+  measurementId: "G-NHZ569079X"
     };
 
     if (getApps().length === 0) {
