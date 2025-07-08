@@ -18,7 +18,9 @@ import {
   where,
   orderBy,
   onSnapshot,
-  getDocs
+  getDocs,
+  enableNetwork,
+  disableNetwork
 } from 'firebase/firestore';
 
 // Import Firebase Auth functions for web
@@ -42,6 +44,12 @@ if (app) {
     // Use Firebase JS SDK for web
     try {
       firestore = getFirestore(app);
+      
+      // Ensure network is enabled for web
+      enableNetwork(firestore).catch(error => {
+        console.warn('Failed to enable Firestore network:', error);
+      });
+      
       console.log('Firebase JS SDK Firestore initialized for web');
     } catch (error) {
       console.error('Firebase JS SDK Firestore initialization error:', error);
@@ -85,6 +93,16 @@ class FirebaseChatService {
       if (!firestore) {
         console.error('Firestore not initialized');
         return false;
+      }
+
+      // For web, ensure network connectivity before proceeding
+      if (Platform.OS === 'web') {
+        try {
+          await enableNetwork(firestore);
+          console.log('Firestore network enabled successfully');
+        } catch (networkError) {
+          console.warn('Network enable failed, continuing anyway:', networkError);
+        }
       }
 
       // Get Firebase custom token from our API

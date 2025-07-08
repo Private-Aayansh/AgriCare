@@ -54,16 +54,23 @@ export default function ChatScreen() {
   }, [chatId, user]);
 
   const initializeChat = async () => {
+    setLoading(true);
     try {
       if (!user) return;
 
+      console.log('Starting chat initialization...');
+      
       // Initialize Firebase auth
       const authSuccess = await firebaseChatService.initializeAuth();
       if (!authSuccess) {
-        Alert.alert('Error', 'Failed to initialize chat. Please try again.');
+        console.error('Firebase auth initialization failed');
+        Alert.alert('Connection Error', 'Unable to connect to chat service. Please check your internet connection and try again.');
+        setLoading(false);
         return;
       }
 
+      console.log('Firebase auth initialized successfully');
+      
       // Create or get existing chat
       const newChatId = await firebaseChatService.createOrGetChat(
         farmerId,
@@ -74,10 +81,20 @@ export default function ChatScreen() {
         jobTitle
       );
 
+      console.log('Chat created/retrieved successfully:', newChatId);
       setChatId(newChatId);
     } catch (error) {
       console.error('Chat initialization error:', error);
-      Alert.alert('Error', 'Failed to load chat. Please try again.');
+      
+      // Provide more specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      if (errorMessage.includes('offline') || errorMessage.includes('network')) {
+        Alert.alert('Connection Error', 'Unable to connect to chat service. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('permission') || errorMessage.includes('auth')) {
+        Alert.alert('Authentication Error', 'Failed to authenticate with chat service. Please try logging out and back in.');
+      } else {
+        Alert.alert('Error', 'Failed to load chat. Please try again.');
+      }
       setLoading(false);
     }
   };
