@@ -82,12 +82,16 @@ export default function LabourHome() {
     
 
   const handleMessageFarmer = (job: Job) => {
+    if (!job.farmer_id || !job.farmer_name) {
+      Alert.alert('Error', 'Farmer information is missing for this job.');
+      return;
+    }
     // Navigate to chat screen
     router.push({
       pathname: '/chat',
       params: {
-        farmerId: job.farmer_id?.toString() || '1',
-        farmerName: job.farmer_name || 'Farmer',
+        farmerId: job.farmer_id.toString(),
+        farmerName: job.farmer_name,
         jobId: job.id.toString(),
         jobTitle: job.title,
       },

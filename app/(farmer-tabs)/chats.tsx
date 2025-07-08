@@ -30,7 +30,7 @@ export default function FarmerChats() {
       }
 
       // Subscribe to chats
-      const unsubscribe = firebaseChatService.subscribeToChats(user.name, (userChats) => {
+      const unsubscribe = firebaseChatService.subscribeToChats(user.id, (userChats) => {
         setChats(userChats);
         setLoading(false);
       });
@@ -145,7 +145,7 @@ export default function FarmerChats() {
                   <Text style={styles.lastMessage} numberOfLines={1}>
                     {chat.lastMessage || 'No messages yet'}
                   </Text>
-                  {user && chat.unreadCount[user.name] > 0 && (
+                  {user && chat.unreadCount[user.id] > 0 && (
                     <View style={styles.unreadBadge}>
                       <Text style={styles.unreadText}>
                         {chat.unreadCount[user.name]}

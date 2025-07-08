@@ -45,7 +45,7 @@ export default function ChatScreen() {
         
         // Mark messages as read
         if (user) {
-          firebaseChatService.markMessagesAsRead(chatId, user.name);
+          firebaseChatService.markMessagesAsRead(chatId, user.id);
         }
       });
 
@@ -68,7 +68,7 @@ export default function ChatScreen() {
       const newChatId = await firebaseChatService.createOrGetChat(
         farmerId,
         farmerName,
-        user.name, // Using user.name as labourId
+        user.id, // Using user.id as labourId
         user.name,
         parseInt(jobId),
         jobTitle
@@ -89,7 +89,7 @@ export default function ChatScreen() {
     try {
       await firebaseChatService.sendMessage(
         chatId,
-        user.name, // Using user.name as senderId
+        user.id, // Using user.id as senderId
         user.name,
         user.role,
         newMessage.trim()
@@ -123,7 +123,7 @@ export default function ChatScreen() {
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isMyMessage = item.senderId === user?.name;
+    const isMyMessage = item.senderId === user?.id;
     
     return (
       <View style={[

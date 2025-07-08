@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 
 let auth: any = null;
 let app: any = null;
@@ -19,9 +21,6 @@ if (Platform.OS !== 'web') {
 } else {
   // Use Firebase JS SDK for web
   try {
-    const { initializeApp, getApps } = require('firebase/app');
-    const { getAuth } = require('firebase/auth');
-    
     const firebaseConfig = {
       apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
       authDomain: "agricare-68b19.firebaseapp.com",

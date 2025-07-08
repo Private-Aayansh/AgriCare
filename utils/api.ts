@@ -120,14 +120,14 @@ export class ApiClient {
   }
 
   async verifyEmailLogin(email: string, otp: string) {
-    return this.request<{ token: string, user: any }>('/api/login/email/verify', {
+    return this.request<LoginResponse>('/api/login/email/verify', {
       method: 'POST',
       body: JSON.stringify({ email, otp }),
     });
   }
 
   async verifyPhoneLogin(idToken: string) {
-    return this.request<{ token: string, user: any }>('/api/login/phone/verify', {
+    return this.request<LoginResponse>('/api/login/phone/verify', {
       method: 'POST',
       body: JSON.stringify({ id_token: idToken }),
     });

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "872782355781",
+    "project_id": "agricare-68b19",
+    "storage_bucket": "agricare-68b19.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872782355781:android:97e9e6cdb1a913c919b22c",
+        "android_client_info": {
+          "package_name": "com.agricare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872782355781:android:34f328ecfae2561019b22c",
+        "android_client_info": {
+          "package_name": "com.noctivagous.boltexponativewind"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

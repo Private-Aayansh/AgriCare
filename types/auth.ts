@@ -1,4 +1,5 @@
 export interface User {
+  id: string;
   name: string;
   email?: string;
   phone?: string;
@@ -21,6 +22,7 @@ export interface SignupRequest {
 
 export interface LoginResponse {
   token: string;
+  user: User;
 }
 
 export interface OTPVerificationRequest {

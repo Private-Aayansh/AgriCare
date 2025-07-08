@@ -1,30 +1,54 @@
 import { Platform } from 'react-native';
 import { apiClient } from './api';
+import { app, auth } from './firebase'; // Import the auth instance
+
+// Import Firebase Firestore functions for web
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  collection,
+  addDoc,
+  updateDoc,
+  increment,
+  writeBatch,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  getDocs
+} from 'firebase/firestore';
+
+// Import Firebase Auth functions for web
+import { signInWithCustomToken } from 'firebase/auth';
+
 
 let firestore: any = null;
 
-if (Platform.OS !== 'web') {
-  // Use React Native Firebase for mobile platforms
-  try {
-    const firestoreModule = require('@react-native-firebase/firestore').default;
-    firestore = firestoreModule();
-    console.log('React Native Firebase Firestore initialized');
-  } catch (error) {
-    console.error('React Native Firebase Firestore initialization error:', error);
-  }
-} else {
-  // Use Firebase JS SDK for web
-  try {
-    const { getFirestore } = require('firebase/firestore');
-    const { app } = require('./firebase');
-    
-    if (app) {
+// Initialize Firestore only if app is available
+if (app) {
+  if (Platform.OS !== 'web') {
+    // Use React Native Firebase for mobile platforms
+    try {
+      const firestoreModule = require('@react-native-firebase/firestore').default;
+      firestore = firestoreModule();
+      console.log('React Native Firebase Firestore initialized');
+    } catch (error) {
+      console.error('React Native Firebase Firestore initialization error:', error);
+    }
+  } else {
+    // Use Firebase JS SDK for web
+    try {
       firestore = getFirestore(app);
       console.log('Firebase JS SDK Firestore initialized for web');
+    } catch (error) {
+      console.error('Firebase JS SDK Firestore initialization error:', error);
     }
-  } catch (error) {
-    console.error('Firebase JS SDK Firestore initialization error:', error);
   }
+} else {
+  console.warn('Firebase app not initialized, Firestore will not be available.');
 }
 
 export interface ChatMessage {
@@ -54,6 +78,7 @@ export interface Chat {
 
 class FirebaseChatService {
   private firebaseToken: string | null = null;
+  private tokenRefreshTimeout: NodeJS.Timeout | null = null;
 
   async initializeAuth(): Promise<boolean> {
     try {
@@ -68,19 +93,57 @@ class FirebaseChatService {
 
       if (Platform.OS !== 'web') {
         // React Native Firebase
-        const auth = require('@react-native-firebase/auth').default;
-        await auth().signInWithCustomToken(this.firebaseToken);
+        const authModule = require('@react-native-firebase/auth').default;
+        await authModule().signInWithCustomToken(this.firebaseToken);
       } else {
         // Firebase JS SDK
-        const { getAuth, signInWithCustomToken } = require('firebase/auth');
-        const auth = getAuth();
         await signInWithCustomToken(auth, this.firebaseToken);
       }
-
       console.log('Firebase authentication successful');
+      this.scheduleTokenRefresh();
       return true;
     } catch (error) {
       console.error('Firebase auth initialization error:', error);
+      return false;
+    }
+  }
+
+  private scheduleTokenRefresh() {
+    if (this.tokenRefreshTimeout) {
+      clearTimeout(this.tokenRefreshTimeout);
+    }
+    // Refresh token 5 minutes before it expires (assuming 1 hour token lifetime)
+    // Firebase custom tokens are valid for 1 hour (3600 seconds)
+    const refreshInterval = (3600 - 300) * 1000; // 55 minutes in milliseconds
+    this.tokenRefreshTimeout = setTimeout(async () => {
+      console.log('Proactively refreshing Firebase custom token...');
+      await this.refreshAuthToken();
+    }, refreshInterval);
+  }
+
+  async refreshAuthToken(): Promise<boolean> {
+    try {
+      if (!auth) {
+        console.error('Auth not initialized, cannot refresh token.');
+        return false;
+      }
+      console.log('Attempting to refresh Firebase custom token...');
+      // Sign out current user to clear any stale session
+      if (auth.currentUser) {
+        console.log('Signing out current Firebase user...');
+        await auth.signOut();
+        console.log('Current Firebase user signed out.');
+      }
+
+      const response = await apiClient.getFirebaseToken();
+      this.firebaseToken = response.firebase_token;
+      console.log('Received new Firebase custom token.');
+      await signInWithCustomToken(auth, this.firebaseToken);
+      console.log('Firebase custom token refreshed and signed in successfully.');
+      this.scheduleTokenRefresh(); // Reschedule after successful refresh
+      return true;
+    } catch (error) {
+      console.error('Error refreshing Firebase custom token:', error);
       return false;
     }
   }
@@ -119,7 +182,6 @@ class FirebaseChatService {
       }
     } else {
       // Firebase JS SDK
-      const { doc, getDoc, setDoc, serverTimestamp } = require('firebase/firestore');
       const chatRef = doc(firestore, 'chats', chatId);
       const chatDoc = await getDoc(chatRef);
 
@@ -181,7 +243,6 @@ class FirebaseChatService {
       await batch.commit();
     } else {
       // Firebase JS SDK
-      const { collection, doc, addDoc, updateDoc, serverTimestamp, increment, writeBatch } = require('firebase/firestore');
       const batch = writeBatch(firestore);
 
       // Add message
@@ -209,34 +270,78 @@ class FirebaseChatService {
     if (!firestore) throw new Error('Firestore not initialized');
 
     if (Platform.OS !== 'web') {
-      // React Native Firebase
-      return firestore
-        .collection('messages')
-        .where('chatId', '==', chatId)
-        .orderBy('timestamp', 'asc')
-        .onSnapshot((snapshot: any) => {
-          const messages = snapshot.docs.map((doc: any) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          callback(messages);
-        });
+      let unsubscribe: () => void;
+
+      const startListening = () => {
+        unsubscribe = firestore
+          .collection('messages')
+          .where('chatId', '==', chatId)
+          .orderBy('timestamp', 'asc')
+          .onSnapshot((snapshot: any) => {
+            const messages = snapshot.docs.map((doc: any) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            callback(messages);
+          }, async (error: any) => {
+            console.error('Firestore messages subscription error (RN Firebase):', error);
+            if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+              console.log('Authentication error, attempting to re-authenticate and re-subscribe.');
+              unsubscribe(); // Unsubscribe the current listener
+              const success = await this.refreshAuthToken();
+              if (success) {
+                console.log('Re-authentication successful, re-subscribing to messages.');
+                startListening(); // Re-subscribe
+              } else {
+                console.error('Failed to re-authenticate after Firestore error.');
+              }
+            }
+          });
+      };
+
+      startListening(); // Initial call to start listening
+
+      return () => {
+        unsubscribe(); // Return the unsubscribe function for external use
+      };
     } else {
       // Firebase JS SDK
-      const { collection, query, where, orderBy, onSnapshot } = require('firebase/firestore');
       const messagesQuery = query(
         collection(firestore, 'messages'),
         where('chatId', '==', chatId),
         orderBy('timestamp', 'asc')
       );
 
-      return onSnapshot(messagesQuery, (snapshot) => {
-        const messages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        callback(messages);
-      });
+      let unsubscribe: () => void;
+
+      const startListening = () => {
+        unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+          const messages = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          callback(messages);
+        }, async (error) => {
+          console.error('Firestore messages subscription error (JS SDK):', error);
+          if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+            console.log('Authentication error, attempting to re-authenticate and re-subscribe.');
+            unsubscribe(); // Unsubscribe the current listener
+            const success = await this.refreshAuthToken();
+            if (success) {
+              console.log('Re-authentication successful, re-subscribing to messages.');
+              startListening(); // Re-subscribe
+            } else {
+              console.error('Failed to re-authenticate after Firestore error, cannot re-subscribe.');
+            }
+          }
+        });
+      };
+
+      startListening(); // Initial call to start listening
+
+      return () => {
+        unsubscribe(); // Return the unsubscribe function for external use
+      };
     }
   }
 
@@ -244,35 +349,56 @@ class FirebaseChatService {
     if (!firestore) throw new Error('Firestore not initialized');
 
     if (Platform.OS !== 'web') {
-      // React Native Firebase
-      return firestore
-        .collection('chats')
-        .where('farmerId', '==', userId)
-        .orderBy('lastMessageTime', 'desc')
-        .onSnapshot((snapshot: any) => {
-          const farmerChats = snapshot.docs.map((doc: any) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+      let unsubscribeFarmer: () => void;
+      let unsubscribeLabour: () => void;
 
-          firestore
-            .collection('chats')
-            .where('labourId', '==', userId)
-            .orderBy('lastMessageTime', 'desc')
-            .onSnapshot((labourSnapshot: any) => {
-              const labourChats = labourSnapshot.docs.map((doc: any) => ({
-                id: doc.id,
-                ...doc.data(),
-              }));
+      const startListening = () => {
+        unsubscribeFarmer = firestore
+          .collection('chats')
+          .where('farmerId', '==', userId)
+          .orderBy('lastMessageTime', 'desc')
+          .onSnapshot((snapshot: any) => {
+            const farmerChats = snapshot.docs.map((doc: any) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
 
-              const allChats = [...farmerChats, ...labourChats];
-              callback(allChats);
-            });
-        });
+            firestore
+              .collection('chats')
+              .where('labourId', '==', userId)
+              .orderBy('lastMessageTime', 'desc')
+              .onSnapshot((labourSnapshot: any) => {
+                const labourChats = labourSnapshot.docs.map((doc: any) => ({
+                  id: doc.id,
+                  ...doc.data(),
+                }));
+
+                const allChats = [...farmerChats, ...labourChats];
+                callback(allChats);
+              });
+          }, async (error: any) => {
+            console.error('Firestore chats subscription error (RN Firebase):', error);
+            if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+              console.log('Authentication error, attempting to re-authenticate and re-subscribe.');
+              unsubscribeFarmer(); // Unsubscribe the current listener
+              const success = await this.refreshAuthToken();
+              if (success) {
+                console.log('Re-authentication successful, re-subscribing to chats.');
+                startListening(); // Re-subscribe
+              } else {
+                console.error('Failed to re-authenticate after Firestore error.');
+              }
+            }
+          });
+      };
+
+      startListening(); // Initial call to start listening
+
+      return () => {
+        unsubscribeFarmer(); // Return the unsubscribe function for external use
+      };
     } else {
       // Firebase JS SDK
-      const { collection, query, where, orderBy, onSnapshot } = require('firebase/firestore');
-      
       const farmerQuery = query(
         collection(firestore, 'chats'),
         where('farmerId', '==', userId),
@@ -285,29 +411,56 @@ class FirebaseChatService {
         orderBy('lastMessageTime', 'desc')
       );
 
-      let farmerChats: Chat[] = [];
-      let labourChats: Chat[] = [];
+      const startListening = () => {
+        const unsubscribeFarmer = onSnapshot(farmerQuery, (snapshot) => {
+          farmerChats = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Chat[];
+          callback([...farmerChats, ...labourChats]);
+        }, async (error) => {
+          console.error('Firestore farmer chats subscription error (JS SDK):', error);
+          if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+            console.log('Authentication error, attempting to re-authenticate and re-subscribe.');
+            unsubscribeFarmer(); // Unsubscribe the current listener
+            const success = await this.refreshAuthToken();
+            if (success) {
+              console.log('Re-authentication successful, re-subscribing to farmer chats.');
+              startListening(); // Re-subscribe
+            } else {
+              console.error('Failed to re-authenticate after Firestore error, cannot re-subscribe.');
+            }
+          }
+        });
 
-      const unsubscribeFarmer = onSnapshot(farmerQuery, (snapshot) => {
-        farmerChats = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Chat[];
-        callback([...farmerChats, ...labourChats]);
-      });
+        const unsubscribeLabour = onSnapshot(labourQuery, (snapshot) => {
+          labourChats = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Chat[];
+          callback([...farmerChats, ...labourChats]);
+        }, async (error) => {
+          console.error('Firestore labour chats subscription error (JS SDK):', error);
+          if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+            console.log('Authentication error, attempting to re-authenticate and re-subscribe.');
+            unsubscribeLabour(); // Unsubscribe the current listener
+            const success = await this.refreshAuthToken();
+            if (success) {
+              console.log('Re-authentication successful, re-subscribing to labour chats.');
+              startListening(); // Re-subscribe
+            } else {
+              console.error('Failed to re-authenticate after Firestore error, cannot re-subscribe.');
+            }
+          }
+        });
 
-      const unsubscribeLabour = onSnapshot(labourQuery, (snapshot) => {
-        labourChats = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Chat[];
-        callback([...farmerChats, ...labourChats]);
-      });
-
-      return () => {
-        unsubscribeFarmer();
-        unsubscribeLabour();
+        return () => {
+          unsubscribeFarmer();
+          unsubscribeLabour();
+        };
       };
+
+      return startListening();
     }
   }
 
@@ -339,7 +492,6 @@ class FirebaseChatService {
       await batch.commit();
     } else {
       // Firebase JS SDK
-      const { doc, updateDoc, collection, query, where, getDocs, writeBatch } = require('firebase/firestore');
       const batch = writeBatch(firestore);
 
       // Reset unread count
