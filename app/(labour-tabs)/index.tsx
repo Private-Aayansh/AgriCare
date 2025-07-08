@@ -86,6 +86,10 @@ export default function LabourHome() {
       Alert.alert('Error', 'Farmer information is missing for this job.');
       return;
     }
+    if (!user || !user.id) {
+      Alert.alert('Error', 'User information is missing. Please try logging out and back in.');
+      return;
+    }
     // Navigate to chat screen
     router.push({
       pathname: '/chat',

@@ -269,6 +269,11 @@ class FirebaseChatService {
   ): Promise<string> {
     if (!firestore) throw new Error('Firestore not initialized');
 
+    // Validate required parameters
+    if (!farmerId || !farmerName || !labourId || !labourName || !jobId || !jobTitle) {
+      throw new Error('Missing required chat parameters. Please ensure all user information is available.');
+    }
+
     // Wait for authentication to complete
     const isAuthenticated = await this.waitForAuth();
     if (!isAuthenticated) {

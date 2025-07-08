@@ -75,7 +75,7 @@ export default function ChatScreen() {
       const newChatId = await firebaseChatService.createOrGetChat(
         farmerId,
         farmerName,
-        user.id, // Using user.id as labourId
+        user.id.toString(), // Ensure user ID is a string
         user.name,
         parseInt(jobId),
         jobTitle
@@ -92,6 +92,8 @@ export default function ChatScreen() {
         Alert.alert('Connection Error', 'Unable to connect to chat service. Please check your internet connection and try again.');
       } else if (errorMessage.includes('permission') || errorMessage.includes('auth')) {
         Alert.alert('Authentication Error', 'Failed to authenticate with chat service. Please try logging out and back in.');
+      } else if (errorMessage.includes('undefined')) {
+        Alert.alert('User Error', 'User information is missing. Please try logging out and back in.');
       } else {
         Alert.alert('Error', 'Failed to load chat. Please try again.');
       }
@@ -106,7 +108,7 @@ export default function ChatScreen() {
     try {
       await firebaseChatService.sendMessage(
         chatId,
-        user.id, // Using user.id as senderId
+        user.id.toString(), // Ensure user ID is a string
         user.name,
         user.role,
         newMessage.trim()

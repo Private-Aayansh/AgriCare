@@ -58,6 +58,10 @@ export default function LabourJobs() {
   }, [fetchNearbyJobs]);
 
   const handleMessagePress = (job: Job) => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'User information is missing. Please try logging out and back in.');
+      return;
+    }
     // Navigate to chat screen
     router.push({
       pathname: '/chat',
