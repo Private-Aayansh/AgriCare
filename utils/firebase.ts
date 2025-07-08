@@ -23,12 +23,12 @@ if (Platform.OS !== 'web') {
   try {
     const firebaseConfig = {
       apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
-  authDomain: "agricare-68b19.firebaseapp.com",
-  projectId: "agricare-68b19",
+      authDomain: "agricare-68b19.firebaseapp.com",
+      databaseURL: "https://agricare-68b19-default-rtdb.firebaseio.com",
+      projectId: "agricare-68b19",
   storageBucket: "agricare-68b19.firebasestorage.app",
   messagingSenderId: "872782355781",
   appId: "1:872782355781:web:3d2aada85d4f2c9519b22c",
-  measurementId: "G-NHZ569079X"
     };
 
     if (getApps().length === 0) {
