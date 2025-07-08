@@ -24,7 +24,7 @@ if (Platform.OS !== 'web') {
   // Use Firebase JS SDK for web
   try {
     const firebaseConfig = {
-      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
+      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw",
       authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "agricare-68b19.firebaseapp.com",
       databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || "https://agricare-68b19-default-rtdb.firebaseio.com",
       projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "agricare-68b19",
