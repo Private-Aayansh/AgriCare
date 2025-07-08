@@ -22,7 +22,7 @@ if (Platform.OS !== 'web') {
   // Use Firebase JS SDK for web
   try {
     const firebaseConfig = {
-      apiKey: "AIzaSyBvOiCP24yFKjFiOpfHmibmWEA6bd96-Pw",
+      apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
       authDomain: "expo-template-default-rtdb.firebaseapp.com",
       databaseURL: "https://expo-template-default-rtdb-default-rtdb.firebaseio.com",
       projectId: "expo-template-default-rtdb",
