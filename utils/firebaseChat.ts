@@ -111,7 +111,8 @@ class FirebaseChatService {
           await enableNetwork(firestore);
           console.log('Firestore network enabled successfully');
         } catch (networkError) {
-          console.warn('Network enable failed, continuing anyway:', networkError);
+          console.error('Network enable failed, cannot proceed with chat initialization:', networkError);
+          return false;
         }
       }
 
