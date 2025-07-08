@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, enableNetwork, disableNetwork } from 'firebase/firestore';
 
 let auth: any = null;
 let app: any = null;
@@ -24,13 +24,12 @@ if (Platform.OS !== 'web') {
   // Use Firebase JS SDK for web
   try {
     const firebaseConfig = {
-      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw",
-      authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "agricare-68b19.firebaseapp.com",
-      databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || "https://agricare-68b19-default-rtdb.firebaseio.com",
-      projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "agricare-68b19",
-      storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "agricare-68b19.firebasestorage.app",
-      messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "872782355781",
-      appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:872782355781:web:3d2aada85d4f2c9519b22c",
+      apiKey: "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw",
+      authDomain: "agricare-68b19.firebaseapp.com",
+      projectId: "agricare-68b19",
+      storageBucket: "agricare-68b19.firebasestorage.app",
+      messagingSenderId: "872782355781",
+      appId: "1:872782355781:web:3d2aada85d4f2c9519b22c",
     };
 
     if (getApps().length === 0) {
@@ -41,11 +40,6 @@ if (Platform.OS !== 'web') {
     
     auth = getAuth(app);
     firestore = getFirestore(app);
-    
-    // Configure auth settings for better custom token handling
-    auth.settings = {
-      appVerificationDisabledForTesting: __DEV__,
-    };
     
     console.log('Firebase JS SDK initialized for web');
   } catch (error) {
