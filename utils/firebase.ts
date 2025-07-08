@@ -22,7 +22,7 @@ if (Platform.OS !== 'web') {
   // Use Firebase JS SDK for web
   try {
     const firebaseConfig = {
-      apiKey: "AIzaSyC2rnbhBwXSqIbypfOU4ywrc2PG9fY_rR8",
+      apiKey: "AIzaSyCWkrMAHqO23yJ9or7oA918T6u2eZFixrw",
       authDomain: "agricare-68b19.firebaseapp.com",
       projectId: "agricare-68b19",
       storageBucket: "agricare-68b19.appspot.com",
